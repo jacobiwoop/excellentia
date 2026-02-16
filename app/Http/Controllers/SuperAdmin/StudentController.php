@@ -1,0 +1,251 @@
+<?php
+
+namespace App\Http\Controllers\SuperAdmin;
+
+use App\Http\Controllers\Controller;
+use App\Models\Student;
+use App\Models\Site;
+use App\Models\Filiere;
+use App\Models\Grade;
+use App\Models\Promotion;
+use App\Models\User;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Auth;
+
+use Illuminate\Support\Str;
+
+
+class StudentController extends Controller
+{
+
+    public function index(Request $request)
+    {
+        $promotions = Promotion::orderBy('date_debut', 'desc')->get();
+        $filieres = Filiere::orderBy('nom')->get();
+
+        // Détermine les statuts à afficher
+        $showArchives = $request->has('show_archives');
+        $statusFilter = $showArchives ? ['termine', 'abandonne'] : ['en_cours'];
+
+        $students = Student::with('site', 'filiere', 'promotion')
+            ->whereIn('statut', $statusFilter)
+            ->when($request->promotion_id, function ($query, $promotionId) {
+                return $query->where('promotion_id', $promotionId);
+            })
+            ->when($request->filiere_id, function ($query, $filiereId) {
+                return $query->where('filiere_id', $filiereId);
+            })
+            ->orderBy('created_at', 'desc')
+            ->paginate(25)
+            ->appends($request->query());
+
+        return view('superadmin.students.index', compact('students', 'promotions', 'filieres', 'showArchives'));
+    }
+
+
+    public function create()
+    {
+        $sites = Site::all();
+        $filieres = Filiere::all();
+        $promotions = Promotion::all();
+        $sexes = ['M' => 'Masculin', 'F' => 'Féminin']; // 🔴 Add this line
+
+        return view('superadmin.students.create', compact('sites', 'filieres', 'promotions', 'sexes'));
+    }
+
+
+
+    public function store(Request $request)
+    {
+
+
+        $request->validate([
+            'nom_prenom' => 'required|string|max:255',
+            'telephone' => 'required|string|max:20',
+            'email' => 'nullable|email|unique:students,email',
+            'date_naissance' => 'nullable|date',
+            'lieu_naissance' => 'nullable|string|max:255',
+
+            'sexe' => 'required|in:M,F',
+            'filiere_id' => 'required|exists:filieres,id',
+            'promotion_id' => 'required|exists:promotions,id',
+            'photo' => 'nullable|image|max:2048',
+        ]);
+        $site = Site::findOrFail($request->site_id);
+        $filiere = Filiere::findOrFail($request->filiere_id);
+
+        // Génération du matricule
+        do {
+            $random = mt_rand(1000, 9999);
+            $matricule = $filiere->code . '-' . $random . '-' . $site->code;
+        } while (Student::where('matricule', $matricule)->exists());
+
+        // 📸 Upload de la photo
+        $photoPath = null;
+        if ($request->hasFile('photo')) {
+            $directory = $_SERVER['DOCUMENT_ROOT'] . '/uploads/students_photos';
+
+            if (!File::exists($directory)) {
+                File::makeDirectory($directory, 0755, true);
+            }
+
+            $photoName = time() . '_' . $request->file('photo')->getClientOriginalName();
+            $request->file('photo')->move($directory, $photoName);
+            $photoPath = 'uploads/students_photos/' . $photoName;
+        }
+
+        Student::create([
+            'nom_prenom' => $request->nom_prenom,
+            'matricule' => $matricule,
+            'telephone' => $request->telephone,
+            'email' => $request->email,
+            'date_naissance' => $request->date_naissance,
+            'lieu_naissance' => $request->lieu_naissance,
+            'sexe' => $request->sexe,
+            'site_id' => $request->site_id, // ✅ on prend la valeur depuis le formulaire
+            'filiere_id' => $request->filiere_id,
+            'promotion_id' => $request->promotion_id,
+            'photo' => $photoPath,
+        ]);
+
+        return redirect()->route('superadmin.students.index')->with('success', 'Étudiant créé avec le matricule: ' . $matricule);
+    }
+
+
+   
+
+    public function edit($id)
+    {
+        $student = Student::findOrFail($id);
+        $sites = Site::all();
+        $filieres = Filiere::all(); // <-- ajouté
+        $promotions = Promotion::all();
+        $sexes = ['M' => 'Masculin', 'F' => 'Féminin'];
+        return view('superadmin.students.edit', compact('student', 'sites', 'filieres', 'promotions', 'sexes'));
+    }
+
+
+    public function update(Request $request, Student $student)
+    {
+        $request->validate([
+            'nom_prenom' => 'required|string|max:255',
+            'telephone' => 'required|string|max:20',
+            'email' => 'required|email|unique:students,email,' . $student->id,
+            'date_naissance' => 'nullable|date',
+            'lieu_naissance' => 'nullable|string|max:255',
+
+            'sexe' => 'required|in:M,F',
+            'site_id' => 'required|exists:sites,id',
+            'filiere_id' => 'required|exists:filieres,id',
+            'promotion_id' => 'required|exists:promotions,id',
+            'photo' => 'nullable|image|max:2048',
+        ]);
+
+        $data = $request->only([
+            'nom_prenom',
+            'telephone',
+            'email',
+            'date_naissance',
+            'lieu_naissance',
+            'sexe',
+            'site_id',
+            'filiere_id',
+            'promotion_id',
+        ]);
+
+        if ($request->hasFile('photo')) {
+            // Supprimer l’ancienne
+            if ($student->photo && file_exists($_SERVER['DOCUMENT_ROOT'] . '/' . $student->photo)) {
+                unlink($_SERVER['DOCUMENT_ROOT'] . '/' . $student->photo);
+            }
+
+            $directory = $_SERVER['DOCUMENT_ROOT'] . '/uploads/students_photos';
+            if (!File::exists($directory)) {
+                File::makeDirectory($directory, 0755, true);
+            }
+
+            $photoName = time() . '_' . $request->file('photo')->getClientOriginalName();
+            $request->file('photo')->move($directory, $photoName);
+            $data['photo'] = 'uploads/students_photos/' . $photoName;
+        }
+
+        $student->fill($data)->save();
+
+        return redirect()->route('superadmin.students.index')->with('success', 'Étudiant mis à jour avec succès');
+    }
+
+
+    public function show($id)
+    {
+        $student = Student::with([
+            'site',
+            'filiere',
+            'promotion',
+            'grades.assignation.subject' // Charger les notes avec leurs relations
+        ])->findOrFail($id);
+
+        // Récupérer toutes les notes de l'étudiant
+        $grades = $student->grades;
+
+        return view('superadmin.students.show', compact('student', 'grades'));
+    }
+
+    public function destroy($id)
+    {
+        $student = Student::findOrFail($id);
+
+        if ($student->photo && Storage::exists($student->photo)) {
+            Storage::delete($student->photo);
+        }
+
+        $student->delete();
+
+        return redirect()->route('superadmin.students.index')->with('success', 'Étudiant supprimé avec succès.');
+    }
+
+    public function showBulletin($studentId, $term = 1)
+    {
+        $student = Student::with(['filiere', 'site', 'promotion'])->findOrFail($studentId);
+        $grades = Grade::where('student_id', $studentId)
+            ->where('term', $term)
+            ->with(['assignation.subject'])
+            ->get();
+
+        return view('superadmin.students.show', [
+            'student' => $student,
+            'grades' => $grades,
+            'currentTerm' => $term,
+            'bulletinGrades' => $grades // Pour le bulletin spécifiquement
+        ]);
+    }
+
+    public function bulkUpdateStatut(Request $request)
+{
+    $request->validate([
+        'student_ids' => 'required|string', // JSON string
+        'statut' => 'required|in:en_cours,termine,abandonne',
+    ]);
+
+    // Décoder le JSON des IDs
+    $studentIds = json_decode($request->student_ids, true);
+
+    $count = Student::whereIn('id', $studentIds)
+        ->update(['statut' => $request->statut]);
+
+    return back()->with('success', "$count étudiant(s) mis à jour avec le statut : " . ucfirst(str_replace('_', ' ', $request->statut)));
+}
+    public function updateStatut(Request $request, $id)
+    {
+        $request->validate([
+            'statut' => 'required|in:en_cours,termine,abandonne',
+        ]);
+
+        $student = Student::findOrFail($id);
+        $student->statut = $request->statut;
+        $student->save();
+
+        return back()->with('success', 'Statut mis à jour avec succès.');
+    }
+}
