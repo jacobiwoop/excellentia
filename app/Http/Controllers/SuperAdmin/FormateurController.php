@@ -18,8 +18,10 @@ class FormateurController extends Controller
 
     public function create()
     {
-       
-        return view('superadmin.formateurs.create');
+        $sites = Site::all();
+
+        // dd($sites);
+        return view('superadmin.formateurs.create', compact("sites"));
     }
 
     public function store(Request $request)
@@ -28,7 +30,8 @@ class FormateurController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users',
             'password' => 'required|string|min:6|confirmed',
-           
+            'site_id' => 'required|exists:sites,id',
+
         ]);
 
         User::create([
@@ -36,7 +39,7 @@ class FormateurController extends Controller
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'role' => 'formateur',
-            
+            'site_id' => $request->site_id,
         ]);
 
         return redirect()->route('superadmin.formateurs.index')->with('success', 'Formateur créé avec succès.');
@@ -46,7 +49,7 @@ class FormateurController extends Controller
     {
         $formateur = User::where('role', 'formateur')->findOrFail($id);
         $sites = Site::all();
-        return view('superadmin.formateurs.edit', compact('formateur'));
+        return view('superadmin.formateurs.edit', compact('formateur', "sites"));
     }
 
     public function update(Request $request, $id)
@@ -57,12 +60,13 @@ class FormateurController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email,' . $formateur->id,
             'password' => 'nullable|string|min:6|confirmed',
-           
+            'site_id' => 'required|exists:sites,id',
+
         ]);
 
         $formateur->name = $request->name;
         $formateur->email = $request->email;
-       
+        $formateur->site_id = $request->site_id;
 
         if ($request->filled('password')) {
             $formateur->password = Hash::make($request->password);

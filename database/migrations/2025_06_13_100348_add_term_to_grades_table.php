@@ -12,15 +12,16 @@ return new class extends Migration
     public function up()
     {
         Schema::table('grades', function (Blueprint $table) {
-            $table->tinyInteger('term')->default(1)->after('formateur_id'); // ajoute le trimestre, default 1
+            if (!Schema::hasColumn('grades', 'term')) {
+                $table->tinyInteger('term')->default(1)->after('formateur_id'); // ajoute le trimestre, default 1
+            }
         });
     }
-    
+
     public function down()
     {
         Schema::table('grades', function (Blueprint $table) {
             $table->dropColumn('term');
         });
     }
-    
 };

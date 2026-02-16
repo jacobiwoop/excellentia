@@ -14,45 +14,88 @@ use Illuminate\Support\Facades\Auth;
 class CoursController extends Controller
 {
 
-  public function index()
-{
-    $cours = Cours::where('formateur_id', Auth::id())
-        ->with(['assignation.site', 'assignation.filiere', 'promotion'])
-        ->get();
-
-    return view('formateur.cours.index', compact('cours'));
-}
-
-
-    public function create()
+    public function index()
     {
-        $sites = \App\Models\Site::all();
+        $cours = Cours::where('formateur_id', Auth::id())
+            ->whereNotNull('fichier_path')
+            ->with(['assignation.site', 'assignation.filiere', 'promotion'])
+            ->get();
+
+        return view('formateur.cours.index', compact('cours'));
+    }
+
+    public function indexVideos()
+    {
+        $cours = Cours::where('formateur_id', Auth::id())
+            ->whereNotNull('video_path')
+            ->with(['assignation.site', 'assignation.filiere', 'promotion'])
+            ->get();
+
+        return view('formateur.cours.videos', compact('cours'));
+    }
+
+
+    public function create(Request $request)
+    {
+        $user = Auth::user();
+        $type = $request->query('type', 'file'); // 'file' par défaut
+
+        if ($user->site_id) {
+            $sites = \App\Models\Site::where('id', $user->site_id)->get();
+        } else {
+            $sites = \App\Models\Site::all();
+        }
+
         $filieres = \App\Models\Filiere::all();
         $promotions = Promotion::all();
 
-        return view('formateur.cours.create', compact('sites', 'filieres', 'promotions'));
+        return view('formateur.cours.create', compact('sites', 'filieres', 'promotions', 'type'));
     }
 
-    
+
     public function store(Request $request)
     {
-        $request->validate([
+        $rules = [
             'titre' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'fichier' => 'required|file|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,jpg,jpeg,png,gif,mp4,mov,avi|max:40960',
             'sites' => 'required|array',
             'sites.*' => 'exists:sites,id',
             'filieres' => 'required|array',
             'filieres.*' => 'exists:filieres,id',
             'promotion_id' => 'required|exists:promotions,id',
-        ]);
+        ];
+
+        // Validation conditionnelle
+        if ($request->hasFile('video')) {
+            $rules['video'] = 'required|file|mimes:mp4,mov,avi,wmv|max:102400';
+            $rules['fichier'] = 'nullable';
+        } else {
+            $rules['fichier'] = 'required|file|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,jpg,jpeg,png,gif,mp4,mov,avi|max:40960';
+            $rules['video'] = 'nullable';
+        }
+
+        $request->validate($rules);
 
         // Upload fichier
-        $fichier = $request->file('fichier');
-        $nomFichier = time() . '_' . $fichier->getClientOriginalName();
-        $chemin = 'uploads/cours/';
-        $fichier->move(public_path($chemin), $nomFichier);
-        $fichierPath = $chemin . $nomFichier;
+        $fichierPath = null;
+        if ($request->hasFile('fichier')) {
+            $fichier = $request->file('fichier');
+            $nomFichier = time() . '_' . $fichier->getClientOriginalName();
+            $chemin = 'uploads/cours/';
+            $fichier->move(public_path($chemin), $nomFichier);
+            $fichierPath = $chemin . $nomFichier;
+        }
+
+
+        // Upload Vidéo (Nouveau)
+        $videoPath = null;
+        if ($request->hasFile('video')) {
+            $video = $request->file('video');
+            $nomVideo = time() . '_video_' . $video->getClientOriginalName();
+            $cheminVideo = 'uploads/cours/videos/';
+            $video->move(public_path($cheminVideo), $nomVideo);
+            $videoPath = $cheminVideo . $nomVideo;
+        }
 
         // Boucle sur chaque combinaison site + filière
         foreach ($request->sites as $siteId) {
@@ -67,6 +110,7 @@ class CoursController extends Controller
                         'titre' => $request->titre,
                         'description' => $request->description,
                         'fichier_path' => $fichierPath,
+                        'video_path' => $videoPath,
                         'assignation_id' => $assignation->id,
                         'promotion_id' => $request->promotion_id,
                         'formateur_id' => Auth::id(),
@@ -80,23 +124,32 @@ class CoursController extends Controller
             ->with('success', 'Cours ajouté avec succès.');
     }
 
-public function edit(Cours $cour)
-{
-    $sites = Site::all();
-    $filieres = Filiere::all();
-    $promotions = Promotion::all();
+    public function edit(Cours $cour)
+    {
+        $sites = Site::all();
+        $filieres = Filiere::all();
+        $promotions = Promotion::all();
 
-    // récupérer tous les cours liés au même fichier
-    $coursGroup = Cours::where('fichier_path', $cour->fichier_path)
-        ->where('formateur_id', Auth::id())
-        ->get();
+        // Déterminer le type (video ou file)
+        $type = $cour->video_path ? 'video' : 'file';
 
-    // extraire les sites et filières sélectionnés
-    $selectedSites = $coursGroup->map(fn($c) => $c->assignation->site_id)->unique()->toArray();
-    $selectedFilieres = $coursGroup->map(fn($c) => $c->assignation->filiere_id)->unique()->toArray();
+        // récupérer tous les cours liés au même fichier ou vidéo
+        $query = Cours::where('formateur_id', Auth::id());
 
-    return view('formateur.cours.edit', compact('cour','sites','filieres','promotions','selectedSites','selectedFilieres'));
-}
+        if ($type === 'video') {
+            $query->where('video_path', $cour->video_path);
+        } else {
+            $query->where('fichier_path', $cour->fichier_path);
+        }
+
+        $coursGroup = $query->get();
+
+        // extraire les sites et filières sélectionnés
+        $selectedSites = $coursGroup->map(fn($c) => $c->assignation->site_id)->unique()->toArray();
+        $selectedFilieres = $coursGroup->map(fn($c) => $c->assignation->filiere_id)->unique()->toArray();
+
+        return view('formateur.cours.edit', compact('cour', 'sites', 'filieres', 'promotions', 'selectedSites', 'selectedFilieres', 'type'));
+    }
 
     public function update(Request $request, Cours $cour)
     {
@@ -104,20 +157,32 @@ public function edit(Cours $cour)
             abort(403);
         }
 
-        $request->validate([
+        // Déterminer le type (video ou file)
+        $type = $cour->video_path ? 'video' : 'file';
+
+        $rules = [
             'titre' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'fichier' => 'nullable|file|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,jpg,jpeg,png,gif,mp4,mov,avi|max:40960',
             'sites' => 'required|array',
             'sites.*' => 'exists:sites,id',
             'filieres' => 'required|array',
             'filieres.*' => 'exists:filieres,id',
             'promotion_id' => 'required|exists:promotions,id',
-        ]);
+        ];
 
-        // Gestion du fichier
+        if ($type === 'video') {
+            $rules['video'] = 'nullable|file|mimes:mp4,mov,avi,wmv|max:102400';
+        } else {
+            $rules['fichier'] = 'nullable|file|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,jpg,jpeg,png,gif,mp4,mov,avi|max:40960';
+        }
+
+        $request->validate($rules);
+
+        // --- GESTION FICHIER / VIDEO ---
         $fichierPath = $cour->fichier_path;
-        if ($request->hasFile('fichier')) {
+        $videoPath = $cour->video_path;
+
+        if ($type === 'file' && $request->hasFile('fichier')) {
             if ($fichierPath && file_exists(public_path($fichierPath))) {
                 unlink(public_path($fichierPath));
             }
@@ -128,35 +193,50 @@ public function edit(Cours $cour)
             $fichierPath = $chemin . $nomFichier;
         }
 
-        // Supprimer toutes les anciennes entrées de ce fichier
-       // Supprimer toutes les anciennes entrées de ce fichier
-Cours::where('fichier_path', $cour->fichier_path)
-    ->where('formateur_id', Auth::id())
-    ->delete();
-
-// Recréer pour chaque combinaison site + filière
-foreach ($request->sites as $siteId) {
-    foreach ($request->filieres as $filiereId) {
-        $assignation = Assignation::where('formateur_id', Auth::id())
-            ->where('site_id', $siteId)
-            ->where('filiere_id', $filiereId)
-            ->first();
-
-        if ($assignation) {
-            Cours::create([
-                'titre' => $request->titre,
-                'description' => $request->description,
-                'fichier_path' => $fichierPath,
-                'assignation_id' => $assignation->id,
-                'promotion_id' => $request->promotion_id,
-                'formateur_id' => Auth::id(),
-            ]);
+        if ($type === 'video' && $request->hasFile('video')) {
+            if ($videoPath && file_exists(public_path($videoPath))) {
+                unlink(public_path($videoPath));
+            }
+            $video = $request->file('video');
+            $nomVideo = time() . '_video_' . $video->getClientOriginalName();
+            $cheminVideo = 'uploads/cours/videos/';
+            $video->move(public_path($cheminVideo), $nomVideo);
+            $videoPath = $cheminVideo . $nomVideo;
         }
-    }
-}
 
+        // Supprimer anciennes entrées
+        $query = Cours::where('formateur_id', Auth::id());
+        if ($type === 'video') {
+            $query->where('video_path', $cour->video_path);
+        } else {
+            $query->where('fichier_path', $cour->fichier_path);
+        }
+        $query->delete();
 
-        return redirect()->route('formateur.cours.index')
+        // Recréer
+        foreach ($request->sites as $siteId) {
+            foreach ($request->filieres as $filiereId) {
+                $assignation = Assignation::where('formateur_id', Auth::id())
+                    ->where('site_id', $siteId)
+                    ->where('filiere_id', $filiereId)
+                    ->first();
+
+                if ($assignation) {
+                    Cours::create([
+                        'titre' => $request->titre,
+                        'description' => $request->description,
+                        'fichier_path' => $fichierPath,
+                        'video_path' => $videoPath,
+                        'assignation_id' => $assignation->id,
+                        'promotion_id' => $request->promotion_id,
+                        'formateur_id' => Auth::id(),
+                    ]);
+                }
+            }
+        }
+
+        $redirectRoute = ($type === 'video') ? 'videos.index' : 'formateur.cours.index';
+        return redirect()->route($redirectRoute)
             ->with('success', 'Cours modifié avec succès.');
     }
 
@@ -166,18 +246,29 @@ foreach ($request->sites as $siteId) {
             abort(403);
         }
 
-        $coursASupprimer = Cours::where('fichier_path', $cour->fichier_path)
-            ->where('formateur_id', Auth::id())
-            ->get();
+        $type = $cour->video_path ? 'video' : 'file';
+        $query = Cours::where('formateur_id', Auth::id());
 
-        $cheminFichier = public_path($cour->fichier_path);
-        if (file_exists($cheminFichier)) {
-            unlink($cheminFichier);
+        if ($type === 'video') {
+            $query->where('video_path', $cour->video_path);
+        } else {
+            $query->where('fichier_path', $cour->fichier_path);
+        }
+        $coursASupprimer = $query->get();
+
+        // Suppression fichiers sur disque
+        if ($type === 'file' && $cour->fichier_path && file_exists(public_path($cour->fichier_path))) {
+            unlink(public_path($cour->fichier_path));
+        }
+        if ($type === 'video' && $cour->video_path && file_exists(public_path($cour->video_path))) {
+            unlink(public_path($cour->video_path));
         }
 
         $coursASupprimer->each->delete();
 
-        return redirect()->route('formateur.cours.index')->with('success', 'Cours et toutes ses versions supprimés avec succès.');
+        $redirectRoute = ($type === 'video') ? 'videos.index' : 'formateur.cours.index';
+        return redirect()->route($redirectRoute)
+            ->with('success', 'Cours supprimé avec succès.');
     }
 
     public function show(Cours $cour)

@@ -268,6 +268,7 @@ Route::middleware(['auth:web', 'formateur'])->prefix('formateur')->name('formate
     Route::post('/attendance', [\App\Http\Controllers\Formateur\AttendanceController::class, 'store'])->name('attendance.store');
 
     // Cours
+    Route::get('/videos', [\App\Http\Controllers\Formateur\CoursController::class, 'indexVideos'])->name('videos.index');
     Route::resource('cours', \App\Http\Controllers\Formateur\CoursController::class);
 
     // ⚠️ ROUTE DUPLIQUÉE SUPPRIMÉE

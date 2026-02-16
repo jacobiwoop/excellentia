@@ -275,16 +275,18 @@
       color: white !important;
     }
 
-     /* Empêcher la modification manuelle de la date */
-     input[type="date"]::-webkit-calendar-picker-indicator {
-        opacity: 1;
-        cursor: pointer;
+    /* Empêcher la modification manuelle de la date */
+    input[type="date"]::-webkit-calendar-picker-indicator {
+      opacity: 1;
+      cursor: pointer;
     }
+
     input[type="date"]::-webkit-inner-spin-button {
-        display: none;
+      display: none;
     }
+
     input[type="date"]::-webkit-clear-button {
-        display: none;
+      display: none;
     }
 
     /* Pour le sélecteur de date */
@@ -383,17 +385,24 @@
             </a>
           </li>
 
-           <li class="menu-item">
+          <li class="menu-item">
             <a href="{{ route('formateur.programmes.index') }}" class="menu-link">
               <i class="menu-icon tf-icons bx bx-clipboard"></i>
               <div data-i18n="Basic">Programmes</div>
             </a>
           </li>
 
-           <li class="menu-item">
+          <li class="menu-item">
             <a href="{{ route('formateur.cours.index') }}" class="menu-link">
-              <i class="menu-icon tf-icons bx bx-clipboard"></i>
+              <i class="menu-icon tf-icons bx bx-download"></i>
               <div data-i18n="Basic">Fichiers</div>
+            </a>
+          </li>
+
+          <li class="menu-item">
+            <a href="{{ route('formateur.videos.index') }}" class="menu-link">
+              <i class="menu-icon tf-icons bx bx-video"></i>
+              <div data-i18n="Basic">Vidéos</div>
             </a>
           </li>
 
@@ -468,9 +477,11 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script>
     // Configuration PDF
-    const { jsPDF } = window.jspdf;
+    const {
+      jsPDF
+    } = window.jspdf;
 
-    document.getElementById('export-pdf').addEventListener('click', function () {
+    document.getElementById('export-pdf').addEventListener('click', function() {
       const btn = this;
       const originalContent = btn.innerHTML;
 
@@ -531,10 +542,10 @@
     window.addEventListener('resize', handleResponsive);
   </script>
   <script>
-    document.addEventListener('DOMContentLoaded', function () {
+    document.addEventListener('DOMContentLoaded', function() {
       // Initialisation des tooltips
       var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-      tooltipTriggerList.map(function (tooltipTriggerEl) {
+      tooltipTriggerList.map(function(tooltipTriggerEl) {
         return new bootstrap.Tooltip(tooltipTriggerEl);
       });
     });
@@ -543,27 +554,27 @@
       const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
       modal.show();
 
-      document.getElementById('confirmDeleteBtn').onclick = function () {
+      document.getElementById('confirmDeleteBtn').onclick = function() {
         document.getElementById(formId).submit();
       };
     }
   </script>
   <script>
-    document.addEventListener("DOMContentLoaded", function () {
+    document.addEventListener("DOMContentLoaded", function() {
       const toggler = document.querySelector('.layout-menu-toggle');
       const menu = document.getElementById('layout-menu');
 
       if (toggler && menu) {
-        toggler.addEventListener('click', function () {
+        toggler.addEventListener('click', function() {
           menu.classList.toggle('d-block');
         });
       }
     });
   </script>
   <script>
-    $(document).ready(function () {
+    $(document).ready(function() {
       // Animation lors du changement d'onglet
-      $('button[data-bs-toggle="tab"]').on('shown.bs.tab', function (e) {
+      $('button[data-bs-toggle="tab"]').on('shown.bs.tab', function(e) {
         $(e.target).addClass('animate__animated animate__fadeIn');
         setTimeout(() => {
           $(e.target).removeClass('animate__animated animate__fadeIn');
@@ -571,8 +582,8 @@
       });
 
       // Formatage des nombres dans les tableaux
-      $('table').on('draw.dt', function () {
-        $('td').each(function () {
+      $('table').on('draw.dt', function() {
+        $('td').each(function() {
           const val = parseFloat($(this).text());
           if (!isNaN(val)) {
             $(this).text(val.toFixed(2));
@@ -583,7 +594,7 @@
   </script>
   <script>
     // Adaptation mobile
-    document.addEventListener('DOMContentLoaded', function () {
+    document.addEventListener('DOMContentLoaded', function() {
       if (window.innerWidth < 768) {
         document.querySelectorAll('tbody tr td').forEach((td, index) => {
           const labels = ['Date', 'Horaire', 'Matière', 'Formateur', 'Salle'];
@@ -617,7 +628,7 @@
     }
   </script>
 
-  
+
 </body>
 
 </html>

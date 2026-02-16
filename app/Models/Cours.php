@@ -10,6 +10,7 @@ class Cours extends Model
         'titre',
         'description',
         'fichier_path',
+        'video_path',
         'assignation_id',
         'promotion_id',
         'formateur_id',
@@ -20,15 +21,15 @@ class Cours extends Model
         return $this->belongsTo(Assignation::class);
     }
     public function getFilieresAttribute()
-{
-    // Version corrigée pour relation "assignation" (singulier)
-    if ($this->assignation && $this->assignation->relationLoaded('filiere')) {
-        return $this->assignation->filiere->nom ?? 'Aucune filière associée';
-    }
+    {
+        // Version corrigée pour relation "assignation" (singulier)
+        if ($this->assignation && $this->assignation->relationLoaded('filiere')) {
+            return $this->assignation->filiere->nom ?? 'Aucune filière associée';
+        }
 
-    // Fallback sécurisé
-    return 'Filières non chargées'; // Ou une requête alternative si nécessaire
-}
+        // Fallback sécurisé
+        return 'Filières non chargées'; // Ou une requête alternative si nécessaire
+    }
 
     public function promotion()
     {

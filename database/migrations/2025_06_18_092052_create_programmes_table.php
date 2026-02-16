@@ -11,21 +11,23 @@ return new class extends Migration
      */
     public function up(): void
     {
-       // database/migrations/xxxx_create_programmes_table.php
-Schema::create('programmes', function (Blueprint $table) {
-    $table->id();
-    $table->date('date_seance');
-    $table->time('heure_debut');
-    $table->time('heure_fin');
-    $table->foreignId('subject_id')->nullable()->constrained(); // Lien optionnel vers les matières existantes
-    $table->string('titre_custom')->nullable(); // Intitulé libre
-    $table->text('description')->nullable();
-    $table->foreignId('formateur_id')->constrained('users');
-    $table->foreignId('filiere_id')->constrained();
-    $table->enum('recurrence', ['ponctuel', 'hebdomadaire', 'mensuel']);
-    $table->date('date_fin_recurrence')->nullable();
-    $table->timestamps();
-});
+        // database/migrations/xxxx_create_programmes_table.php
+        if (!Schema::hasTable('programmes')) {
+            Schema::create('programmes', function (Blueprint $table) {
+                $table->id();
+                $table->date('date_seance');
+                $table->time('heure_debut');
+                $table->time('heure_fin');
+                $table->foreignId('subject_id')->nullable()->constrained(); // Lien optionnel vers les matières existantes
+                $table->string('titre_custom')->nullable(); // Intitulé libre
+                $table->text('description')->nullable();
+                $table->foreignId('formateur_id')->constrained('users');
+                $table->foreignId('filiere_id')->constrained();
+                $table->enum('recurrence', ['ponctuel', 'hebdomadaire', 'mensuel']);
+                $table->date('date_fin_recurrence')->nullable();
+                $table->timestamps();
+            });
+        }
     }
 
     /**

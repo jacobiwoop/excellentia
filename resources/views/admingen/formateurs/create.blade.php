@@ -5,7 +5,7 @@
     <h2>Créer un nouveau formateur</h2>
 
     @if(session('success'))
-        <div class="alert alert-success">{{ session('success') }}</div>
+    <div class="alert alert-success">{{ session('success') }}</div>
     @endif
 
     <form action="{{ route('admingen.formateurs.store') }}" method="POST">
@@ -20,6 +20,9 @@
             <label for="email" class="form-label">Adresse email</label>
             <input type="email" name="email" class="form-control" required>
         </div>
+
+
+
 
         <div class="mb-3">
             <label for="password" class="form-label">Mot de passe</label>
