@@ -5,12 +5,13 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
+use Agence104\LiveKit\AccessToken;
+use Agence104\LiveKit\VideoGrant;
+
 class BetaLiveController extends Controller
 {
     public function create()
     {
-        // On récupère les promotions du formateur connecté (ou toutes si admin)
-        // Simplification pour la beta : on prend toutes les promotions
         $promotions = \App\Models\Promotion::all();
         return view('beta.create', compact('promotions'));
     }
@@ -25,7 +26,7 @@ class BetaLiveController extends Controller
 
         $live = \App\Models\CourseLive::create([
             'titre' => $request->titre,
-            'meeting_id' => 'excellentia-live-' . uniqid(), // ID unique pour Jitsi
+            'meeting_id' => 'excellentia-live-' . uniqid(),
             'date_debut' => $request->date_debut,
             'formateur_id' => Auth::id(),
             'promotion_id' => $request->promotion_id,
@@ -37,27 +38,59 @@ class BetaLiveController extends Controller
 
     public function host(\App\Models\CourseLive $live)
     {
-        // Vérification élémentaire de sécurité (le créateur est l'hôte)
         if ($live->formateur_id !== Auth::id()) {
             abort(403, "Seul le créateur peut lancer ce live.");
         }
 
+        $token = $this->generateToken($live->meeting_id, Auth::user(), true);
+
         return view('beta.room', [
             'live' => $live,
             'isHost' => true,
-            'user' => Auth::user()
+            'user' => Auth::user(),
+            'token' => $token,
+            'livekitUrl' => env('LIVEKIT_URL')
         ]);
     }
 
     public function join(\App\Models\CourseLive $live)
     {
-        // Dans la vrai vie, on vérifierait si le user appartient à la promo
-        // Pour la beta, on laisse ouvert à tout user connecté
+        $token = $this->generateToken($live->meeting_id, Auth::user(), false);
 
         return view('beta.room', [
             'live' => $live,
             'isHost' => false,
-            'user' => Auth::user()
+            'user' => Auth::user(),
+            'token' => $token,
+            'livekitUrl' => env('LIVEKIT_URL')
         ]);
+    }
+
+    private function generateToken($roomName, $user, $isHost)
+    {
+        $apiKey = env('LIVEKIT_API_KEY');
+        $apiSecret = env('LIVEKIT_API_SECRET');
+
+        $token = new AccessToken($apiKey, $apiSecret);
+        $token->setIdentity((string) $user->id);
+        $token->setName($user->prenom . ' ' . $user->nom);
+
+        $grant = new VideoGrant();
+        $grant->setRoomJoin(true);
+        $grant->setRoomName($roomName);
+
+        if ($isHost) {
+            $grant->setCanPublish(true);
+            $grant->setCanSubscribe(true);
+            $grant->setCanPublishData(true);
+        } else {
+            $grant->setCanPublish(false); // Étudiants ne publient pas (pour l'instant)
+            $grant->setCanSubscribe(true);
+            $grant->setCanPublishData(true); // Pour le chat éventuel
+        }
+
+        $token->addGrant($grant);
+
+        return $token->toJwt();
     }
 }
