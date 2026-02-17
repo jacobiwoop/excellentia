@@ -481,48 +481,51 @@
       jsPDF
     } = window.jspdf;
 
-    document.getElementById('export-pdf').addEventListener('click', function() {
-      const btn = this;
-      const originalContent = btn.innerHTML;
+    const exportPdfBtn = document.getElementById('export-pdf');
+    if (exportPdfBtn) {
+      exportPdfBtn.addEventListener('click', function() {
+        const btn = this;
+        const originalContent = btn.innerHTML;
 
-      // Désactiver temporairement le bouton
-      btn.disabled = true;
-      btn.innerHTML = '<i class="fas fa-file-pdf mr-1"></i> <span class="d-none d-md-inline">Génération...</span>';
+        // Désactiver temporairement le bouton
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-file-pdf mr-1"></i> <span class="d-none d-md-inline">Génération...</span>';
 
-      // Options pour la capture
-      const options = {
-        scale: 2,
-        useCORS: true,
-        scrollX: 0,
-        scrollY: 0,
-        windowWidth: document.getElementById('pdf-content').scrollWidth,
-        windowHeight: document.getElementById('pdf-content').scrollHeight,
-        logging: false
-      };
+        // Options pour la capture
+        const options = {
+          scale: 2,
+          useCORS: true,
+          scrollX: 0,
+          scrollY: 0,
+          windowWidth: document.getElementById('pdf-content').scrollWidth,
+          windowHeight: document.getElementById('pdf-content').scrollHeight,
+          logging: false
+        };
 
-      // Capture du contenu
-      html2canvas(document.getElementById('pdf-content'), options).then(canvas => {
-        // Création du PDF en paysage pour plus d'espace
-        const pdf = new jsPDF('l', 'mm', 'a4');
-        const imgData = canvas.toDataURL('image/png');
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+        // Capture du contenu
+        html2canvas(document.getElementById('pdf-content'), options).then(canvas => {
+          // Création du PDF en paysage pour plus d'espace
+          const pdf = new jsPDF('l', 'mm', 'a4');
+          const imgData = canvas.toDataURL('image/png');
+          const pdfWidth = pdf.internal.pageSize.getWidth();
+          const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 
-        // Ajout de l'image au PDF
-        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+          // Ajout de l'image au PDF
+          pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
 
-        // Téléchargement automatique
-        pdf.save('Emploi-du-temps-' + new Date().toLocaleDateString('fr-FR') + '.pdf');
+          // Téléchargement automatique
+          pdf.save('Emploi-du-temps-' + new Date().toLocaleDateString('fr-FR') + '.pdf');
 
-      }).catch(error => {
-        console.error("Erreur lors de la génération du PDF:", error);
-        alert("Une erreur est survenue lors de la génération du PDF");
-      }).finally(() => {
-        // Réactiver le bouton
-        btn.disabled = false;
-        btn.innerHTML = originalContent;
+        }).catch(error => {
+          console.error("Erreur lors de la génération du PDF:", error);
+          alert("Une erreur est survenue lors de la génération du PDF");
+        }).finally(() => {
+          // Réactiver le bouton
+          btn.disabled = false;
+          btn.innerHTML = originalContent;
+        });
       });
-    });
+    }
 
     // Adaptation responsive
     function handleResponsive() {

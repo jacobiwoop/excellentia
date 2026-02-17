@@ -313,3 +313,14 @@ Route::middleware(['auth:student'])->prefix('etudiant')->name('etudiant.')->grou
     // Exemple:
     // Route::get('/notes', [StudentDashboardController::class, 'notes'])->name('notes');
 });
+// ==================== STREAMING BETA (ISOLE) ====================
+Route::prefix('beta')->name('beta.')->middleware(['auth:web'])->group(function () {
+
+    // Espace Créateur (Formateur)
+    Route::get('/create', [App\Http\Controllers\BetaLiveController::class, 'create'])->name('create');
+    Route::post('/create', [App\Http\Controllers\BetaLiveController::class, 'store'])->name('store');
+    Route::get('/room/{live}', [App\Http\Controllers\BetaLiveController::class, 'host'])->name('host'); // Salle Admin
+
+    // Espace Participant (Étudiant test)
+    Route::get('/join/{live}', [App\Http\Controllers\BetaLiveController::class, 'join'])->name('join'); // Salle Participant
+});

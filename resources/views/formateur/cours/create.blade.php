@@ -16,7 +16,7 @@
 
     <h2>{{ $type === 'video' ? 'Ajouter une Vidéo' : 'Ajouter un Document' }}</h2>
 
-    <form action="{{ route('formateur.cours.store') }}" method="POST" enctype="multipart/form-data">
+    <form action="{{ route('formateur.cours.store', ['type' => $type]) }}" method="POST" enctype="multipart/form-data">
         @csrf
 
         {{-- Titre --}}
@@ -91,7 +91,7 @@
         @endif
 
         <button type="submit" class="btn btn-primary">Enregistrer</button>
-        <a href="{{ $type === 'video' ? route('videos.index') : route('formateur.cours.index') }}" class="btn btn-secondary">Annuler</a>
+        <a href="{{ $type === 'video' ? route('formateur.videos.index') : route('formateur.cours.index') }}" class="btn btn-secondary">Annuler</a>
     </form>
 </div>
 @endsection

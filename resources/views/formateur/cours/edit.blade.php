@@ -4,7 +4,7 @@
 <div class="container mt-4">
     <h2>Modifier le cours</h2>
 
-    <form action="{{ route('formateur.cours.update', $cour->id) }}" method="POST" enctype="multipart/form-data">
+    <form action="{{ route('formateur.cours.update', ['cour' => $cour->id, 'type' => $type]) }}" method="POST" enctype="multipart/form-data">
         @csrf
         @method('PUT')
 
@@ -60,9 +60,10 @@
         </div>
 
         {{-- Fichier --}}
+        @if($type === 'file')
         <div class="mb-3">
             <label for="fichier" class="form-label">Fichier (laisser vide pour ne pas changer)</label>
-            <input type="file" name="fichier" id="fichier" class="form-control">
+            <input type="file" name="fichier" id="fichier" class="form-control" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,image/*">
             @if($cour->fichier_path ?? false)
             <p class="mt-2">Fichier actuel :
                 <a href="{{ asset($cour->fichier_path) }}" target="_blank">
@@ -71,14 +72,15 @@
             </p>
             @endif
         </div>
+        @endif
 
         {{-- Vidéo --}}
+        @if($type === 'video')
         <div class="mb-3">
             <label for="video" class="form-label">Vidéo (laisser vide pour ne pas changer)</label>
             <input type="file" name="video" id="video" class="form-control"
                 accept="video/mp4,video/x-m4v,video/*">
             <small class="text-muted">Formats acceptés : MP4, MOV, AVI. Max 100 Mo.</small>
-
             @if($cour->video_path ?? false)
             <p class="mt-2">Vidéo actuelle :
                 <a href="{{ asset($cour->video_path) }}" target="_blank">
@@ -87,9 +89,10 @@
             </p>
             @endif
         </div>
+        @endif
 
         <button type="submit" class="btn btn-primary">Mettre à jour</button>
-        <a href="{{ route('formateur.cours.index') }}" class="btn btn-secondary">Annuler</a>
+        <a href="{{ $type === 'video' ? route('formateur.videos.index') : route('formateur.cours.index') }}" class="btn btn-secondary">Annuler</a>
     </form>
 </div>
 @endsection

@@ -55,6 +55,9 @@ class CoursController extends Controller
 
     public function store(Request $request)
     {
+        // On récupère le type depuis l'URL (query param) car en cas de fichier trop lourd, $_POST est vide
+        $type = $request->query('type', 'file');
+
         $rules = [
             'titre' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -66,7 +69,7 @@ class CoursController extends Controller
         ];
 
         // Validation conditionnelle
-        if ($request->hasFile('video')) {
+        if ($type === 'video') {
             $rules['video'] = 'required|file|mimes:mp4,mov,avi,wmv|max:102400';
             $rules['fichier'] = 'nullable';
         } else {
@@ -157,8 +160,9 @@ class CoursController extends Controller
             abort(403);
         }
 
-        // Déterminer le type (video ou file)
-        $type = $cour->video_path ? 'video' : 'file';
+        // On privilégie le type passé en URL (transmis par le formulaire) pour la validation
+        // Sinon on fallback sur le type actuel du cours
+        $type = $request->query('type', $cour->video_path ? 'video' : 'file');
 
         $rules = [
             'titre' => 'required|string|max:255',
@@ -235,7 +239,7 @@ class CoursController extends Controller
             }
         }
 
-        $redirectRoute = ($type === 'video') ? 'videos.index' : 'formateur.cours.index';
+        $redirectRoute = ($type === 'video') ? 'formateur.videos.index' : 'formateur.cours.index';
         return redirect()->route($redirectRoute)
             ->with('success', 'Cours modifié avec succès.');
     }
@@ -266,7 +270,7 @@ class CoursController extends Controller
 
         $coursASupprimer->each->delete();
 
-        $redirectRoute = ($type === 'video') ? 'videos.index' : 'formateur.cours.index';
+        $redirectRoute = ($type === 'video') ? 'formateur.videos.index' : 'formateur.cours.index';
         return redirect()->route($redirectRoute)
             ->with('success', 'Cours supprimé avec succès.');
     }

@@ -81,7 +81,7 @@
                         </a>
                         @endif
 
-                        @endif
+
 
                         {{-- Bouton Modifier --}}
                         <a href="{{ route('formateur.cours.edit', ['cour' => $c->id]) }}"
