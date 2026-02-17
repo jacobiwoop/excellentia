@@ -71,9 +71,11 @@ class BetaLiveController extends Controller
         $apiKey = env('LIVEKIT_API_KEY');
         $apiSecret = env('LIVEKIT_API_SECRET');
 
-        $token = new AccessToken($apiKey, $apiSecret);
-        $token->setIdentity((string) $user->id);
-        $token->setName($user->prenom . ' ' . $user->nom);
+        $tokenOptions = (new \Agence104\LiveKit\AccessTokenOptions())
+            ->setIdentity((string) $user->id)
+            ->setName($user->prenom . ' ' . $user->nom);
+
+        $token = new AccessToken($apiKey, $apiSecret, $tokenOptions);
 
         $grant = new VideoGrant();
         $grant->setRoomJoin(true);
@@ -89,7 +91,7 @@ class BetaLiveController extends Controller
             $grant->setCanPublishData(true); // Pour le chat éventuel
         }
 
-        $token->addGrant($grant);
+        $token->setGrant($grant);
 
         return $token->toJwt();
     }
