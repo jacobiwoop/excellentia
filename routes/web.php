@@ -312,15 +312,21 @@ Route::middleware(['auth:student'])->prefix('etudiant')->name('etudiant.')->grou
     // Ajoute ici les autres routes étudiantes (notes, emploi du temps, etc.)
     // Exemple:
     // Route::get('/notes', [StudentDashboardController::class, 'notes'])->name('notes');
+
+    // ACCÈS LIVES ÉTUDIANT
+    Route::get('/lives', [\App\Http\Controllers\BetaLiveController::class, 'index'])->name('lives.index');
+    Route::get('/lives/{live}', [\App\Http\Controllers\BetaLiveController::class, 'join'])->name('lives.join');
 });
 // ==================== STREAMING BETA (ISOLE) ====================
 Route::prefix('beta')->name('beta.')->middleware(['auth:web'])->group(function () {
 
     // Espace Créateur (Formateur)
+    Route::get('/', [App\Http\Controllers\BetaLiveController::class, 'index'])->name('index'); // Liste des lives
     Route::get('/create', [App\Http\Controllers\BetaLiveController::class, 'create'])->name('create');
     Route::post('/create', [App\Http\Controllers\BetaLiveController::class, 'store'])->name('store');
     Route::get('/room/{live}', [App\Http\Controllers\BetaLiveController::class, 'host'])->name('host'); // Salle Admin
+    Route::post('/stop/{live}', [App\Http\Controllers\BetaLiveController::class, 'stop'])->name('stop');
 
-    // Espace Participant (Étudiant test)
-    Route::get('/join/{live}', [App\Http\Controllers\BetaLiveController::class, 'join'])->name('join'); // Salle Participant
+    // Pour tester join en tant que User via /beta
+    Route::get('/join/{live}', [App\Http\Controllers\BetaLiveController::class, 'join'])->name('join');
 });

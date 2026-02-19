@@ -406,6 +406,14 @@
             </a>
           </li>
 
+          <!-- LIVE (BETA) -->
+          <li class="menu-item">
+            <a href="{{ route('beta.index') }}" class="menu-link">
+              <i class="menu-icon tf-icons bx bx-broadcast"></i>
+              <div data-i18n="Basic">Classes Virtuelles (Beta)</div>
+            </a>
+          </li>
+
           <!-- Déconnexion -->
           <li class="menu-item logout-menu-item">
             <a href="{{ route('logout') }}" class="menu-link"

@@ -62,9 +62,11 @@
         .menu-item a {
             color: white;
         }
+
         .menu-item a:hover {
             text-decoration: none;
         }
+
         .filter-btn {
             cursor: pointer;
         }
@@ -129,6 +131,7 @@
             height: 50px;
             object-fit: cover;
         }
+
         /* Style pour le bouton de déconnexion dans la sidebar */
         .logout-menu-item {
             position: absolute;
@@ -213,6 +216,13 @@
                     </li>
 
                     <li class="menu-item">
+                        <a href="{{ route('etudiant.lives.index') }}" class="menu-link">
+                            <i class="menu-icon tf-icons bx bx-broadcast"></i>
+                            <div data-i18n="Basic">Classes Virtuelles</div>
+                        </a>
+                    </li>
+
+                    <li class="menu-item">
                         <a href="{{ route('etudiant.student_fees.index') }}" class="menu-link">
                             <i class="menu-icon tf-icons bx bx-collection"></i>
                             <div data-i18n="Basic">Mes paiements</div>
@@ -237,16 +247,16 @@
             <!-- Layout container -->
             <div class="layout-page" style="background: #fff;">
                 <nav
-                class="layout-navbar container-xxl navbar navbar-expand-xl navbar-detached align-items-center bg-navbar-theme"
-                id="layout-navbar">
-                <div class="layout-menu-toggle navbar-nav align-items-xl-center me-3 me-xl-0 d-xl-none">
-                  <a class="nav-item nav-link px-0 me-xl-4" href="javascript:void(0)">
-                    <i class="bx bx-menu bx-sm"></i>
-                  </a>
-                </div>
-                
-              </nav>
-      
+                    class="layout-navbar container-xxl navbar navbar-expand-xl navbar-detached align-items-center bg-navbar-theme"
+                    id="layout-navbar">
+                    <div class="layout-menu-toggle navbar-nav align-items-xl-center me-3 me-xl-0 d-xl-none">
+                        <a class="nav-item nav-link px-0 me-xl-4" href="javascript:void(0)">
+                            <i class="bx bx-menu bx-sm"></i>
+                        </a>
+                    </div>
+
+                </nav>
+
 
                 <!-- Content wrapper -->
                 <div class="content-wrapper" style="background: #fff;">
@@ -293,9 +303,11 @@
 
     <script>
         // Configuration PDF
-        const { jsPDF } = window.jspdf;
+        const {
+            jsPDF
+        } = window.jspdf;
 
-        document.getElementById('export-pdf').addEventListener('click', function () {
+        document.getElementById('export-pdf').addEventListener('click', function() {
             const btn = this;
             const originalContent = btn.innerHTML;
 
@@ -338,9 +350,9 @@
         });
     </script>
     <script>
-        $(document).ready(function () {
+        $(document).ready(function() {
             // Animation lors du changement d'onglet
-            $('button[data-bs-toggle="tab"]').on('shown.bs.tab', function (e) {
+            $('button[data-bs-toggle="tab"]').on('shown.bs.tab', function(e) {
                 $(e.target).addClass('animate__animated animate__fadeIn');
                 setTimeout(() => {
                     $(e.target).removeClass('animate__animated animate__fadeIn');
@@ -348,8 +360,8 @@
             });
 
             // Formatage des nombres dans les tableaux
-            $('table').on('draw.dt', function () {
-                $('td').each(function () {
+            $('table').on('draw.dt', function() {
+                $('td').each(function() {
                     const val = parseFloat($(this).text());
                     if (!isNaN(val)) {
                         $(this).text(val.toFixed(2));
@@ -360,7 +372,7 @@
     </script>
     <script>
         // Adaptation mobile
-        document.addEventListener('DOMContentLoaded', function () {
+        document.addEventListener('DOMContentLoaded', function() {
             if (window.innerWidth < 768) {
                 document.querySelectorAll('tbody tr td').forEach((td, index) => {
                     const labels = ['Date', 'Horaire', 'Matière', 'Formateur', 'Salle'];

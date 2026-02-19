@@ -5,19 +5,36 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
-use Agence104\LiveKit\AccessToken;
-use Agence104\LiveKit\VideoGrant;
-
 class BetaLiveController extends Controller
 {
+    public function index()
+    {
+        $lives = \App\Models\CourseLive::where('is_active', true)->orderBy('created_at', 'desc')->get();
+
+        // Démarcation simple : Si connecté via 'web' (User), on affiche le bouton "Créer"
+        // Si 'student' (Student), on affiche juste la liste.
+        $canCreate = Auth::guard('web')->check() && (Auth::user()->hasRole('formateur') || Auth::user()->hasRole('admin'));
+
+        return view('beta.index', compact('lives', 'canCreate'));
+    }
+
     public function create()
     {
+        // Sécurité : Seuls Formateurs/Admins peuvent créer
+        if (!Auth::guard('web')->check() || (!Auth::user()->hasRole('formateur') && !Auth::user()->hasRole('admin'))) {
+            abort(403, "Accès réservé aux formateurs.");
+        }
+
         $promotions = \App\Models\Promotion::all();
         return view('beta.create', compact('promotions'));
     }
 
     public function store(Request $request)
     {
+        if (!Auth::guard('web')->check()) {
+            abort(403);
+        }
+
         $request->validate([
             'titre' => 'required|string|max:255',
             'promotion_id' => 'required|exists:promotions,id',
@@ -38,61 +55,56 @@ class BetaLiveController extends Controller
 
     public function host(\App\Models\CourseLive $live)
     {
-        if ($live->formateur_id !== Auth::id()) {
+        // Seul le créateur (User) peut hoster
+        if (!Auth::guard('web')->check() || $live->formateur_id !== Auth::id()) {
             abort(403, "Seul le créateur peut lancer ce live.");
         }
 
-        $token = $this->generateToken($live->meeting_id, Auth::user(), true);
+        $user = Auth::user();
+        $displayName = $user->name; // User standard a 'name'
 
         return view('beta.room', [
             'live' => $live,
             'isHost' => true,
-            'user' => Auth::user(),
-            'token' => $token,
-            'livekitUrl' => env('LIVEKIT_URL')
+            'user' => $user,
+            'displayName' => $displayName,
+            'roomName' => $live->meeting_id
         ]);
     }
 
     public function join(\App\Models\CourseLive $live)
     {
-        $token = $this->generateToken($live->meeting_id, Auth::user(), false);
+        // Récupération de l'utilisateur (Soit Web/Formateur, Soit Student)
+        $user = null;
+        $displayName = 'Invité';
+
+        if (Auth::guard('web')->check()) {
+            $user = Auth::guard('web')->user();
+            $displayName = $user->name;
+        } elseif (Auth::guard('student')->check()) {
+            $user = Auth::guard('student')->user();
+            $displayName = $user->nom_prenom ?? 'Étudiant';
+        } else {
+            return redirect()->route('login'); // Ou student.login
+        }
 
         return view('beta.room', [
             'live' => $live,
             'isHost' => false,
-            'user' => Auth::user(),
-            'token' => $token,
-            'livekitUrl' => env('LIVEKIT_URL')
+            'user' => $user,
+            'displayName' => $displayName,
+            'roomName' => $live->meeting_id
         ]);
     }
-
-    private function generateToken($roomName, $user, $isHost)
+    public function stop(\App\Models\CourseLive $live)
     {
-        $apiKey = env('LIVEKIT_API_KEY');
-        $apiSecret = env('LIVEKIT_API_SECRET');
-
-        $tokenOptions = (new \Agence104\LiveKit\AccessTokenOptions())
-            ->setIdentity((string) $user->id)
-            ->setName($user->prenom . ' ' . $user->nom);
-
-        $token = new AccessToken($apiKey, $apiSecret, $tokenOptions);
-
-        $grant = new VideoGrant();
-        $grant->setRoomJoin(true);
-        $grant->setRoomName($roomName);
-
-        if ($isHost) {
-            $grant->setCanPublish(true);
-            $grant->setCanSubscribe(true);
-            $grant->setCanPublishData(true);
-        } else {
-            $grant->setCanPublish(false); // Étudiants ne publient pas (pour l'instant)
-            $grant->setCanSubscribe(true);
-            $grant->setCanPublishData(true); // Pour le chat éventuel
+        // Seul le créateur peut arrêter le live
+        if (!Auth::guard('web')->check() || $live->formateur_id !== Auth::id()) {
+            abort(403, "Action non autorisée.");
         }
 
-        $token->setGrant($grant);
+        $live->update(['is_active' => false]);
 
-        return $token->toJwt();
+        return redirect()->route('beta.index')->with('success', 'Le live a été terminé.');
     }
 }
